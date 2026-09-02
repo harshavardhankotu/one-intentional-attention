@@ -1,56 +1,116 @@
-# ONE — User Testing & Behavioral Validation Plan
+# ONE — Beta Usability Testing Protocol & Real-World Validation
 
-## 1. Primary Hypothesis & North Star
-> **Primary Hypothesis:** "If a person consciously defines what matters right now, a context-aware intervention can help them return to that intention when they drift."
-
-* **North Star Metric:** % of session time spent on chosen intention.
-* **Secondary Metrics:** Recovery latency speed (seconds to return), intentional exception compliance, subjective annoyance score (1–10).
+## 1. Objectives & Testing Philosophy
+> **"One thing. Right now."**
+> **Core Principle:** The participant must be able to use ONE autonomously without being coached through interactions. The facilitator observes natural behavior, friction points, and behavioral alignment.
 
 ---
 
-## 2. Participant Cohort (10–20 Users)
-* **Cohort Profile:**
-  * 5 Software Engineers / Founders
-  * 5 University / Exam Preparation Students
-  * 5 Knowledge Workers / Writers / Researchers
-* **Inclusion Criteria:** Self-reported difficulty with automatic habit loops (e.g. reflexively opening YouTube, Instagram, Reddit while working).
+## 2. Participant Cohort (5–10 Users)
+* **Cohort Composition:**
+  * 3 Software Engineers / Technical Builders
+  * 3 Students / Exam Candidates
+  * 2 Knowledge Workers / Researchers / Writers
+* **Recruitment Criteria:** Individuals experiencing digital attention fragmentation who regularly lose focus to reflexive habit loops (opening social media, news, or video feeds during work).
 
 ---
 
-## 3. Test Scenarios
-
-### Scenario A: High-Stakes Focus Session
-* **Task:** Define a specific 45-minute technical goal (*"Implement authentication middleware"*).
-* **Intervention Test:** Intentionally attempt to open a habitual distraction. Observe the Intent Firewall prompt (*"WAIT. You said: [Goal]"*). Choose *"I got distracted"*.
-* **Measure:** Did the prompt feel judgmental? How quickly did the user refocus?
-
-### Scenario B: Legitimate Research Need (Intentional Exception)
-* **Task:** During a session, user needs to search API documentation on an otherwise distracting site (e.g. YouTube tutorial or StackOverflow).
-* **Intervention Test:** Select *"I have a specific reason"* and activate a 2-minute timed pass.
-* **Measure:** Did the countdown banner provide sufficient clarity without causing anxiety? Did the user return when the pass expired?
-
-### Scenario C: Intrusive Thought Offloading (Distraction Inbox)
-* **Task:** When an unrelated idea strikes (*"Need to buy airline tickets"*), press `S` or `Cmd+K` and save to the Distraction Inbox.
-* **Measure:** Did this relieve mental pressure (Zeigarnik effect) without derailing the session?
-
-### Scenario D: Mid-Day Fatigue (Focus Rescue)
-* **Task:** User has procrastinated for 3 hours and feels their day is lost. Click *"Rescue Me"*.
-* **Measure:** Did the empathetic reset message (*"You haven't lost the day"*) restore motivation?
+## 3. Privacy Notice to Participants
+> **100% On-Device Privacy Guarantee:**
+> During this study, ONE will store your session goals, durations, and distraction notes purely inside your browser's local storage (IndexedDB). No analytics, telemetry, or personal browsing history is transmitted to any cloud server or third-party service. You retain 100% data ownership and may export or wipe all stored data at any time via the Attention Dashboard.
 
 ---
 
-## 4. Qualitative Interview Script
-1. **Perception of Control:** *"Did ONE feel like a supportive ally or a restrictive jailer?"*
-2. **Annoyance vs. Value:** *"On a scale of 1–10, how intrusive was the Intent Firewall when you drifted?"*
-3. **Compassion Assessment:** *"How did it feel when you drifted? Did you experience guilt, or did you feel encouraged to restart?"*
-4. **Outcome Value:** *"Did answering 'What did you accomplish?' feel more meaningful than seeing total screen time?"*
-5. **Voluntary Re-use:** *"Would you voluntarily open ONE tomorrow morning before starting work?"*
+## 4. Participant Task Instructions (Self-Guided)
+
+### Phase 1: Onboarding & Intention Creation
+1. Open the ONE web application (`http://localhost:5173`).
+2. Read the introductory onboarding slides and begin.
+3. Formulate a genuine work, study, or creative goal you want to accomplish right now (25–45 minutes).
+4. Optionally use the **Sharpen** button to turn vague goals into concrete actions.
+5. Select an appropriate Protection Level (Levels 1 to 5) and enter **ONE THING Mode**.
+
+### Phase 2: Protecting Focus & Offloading Stray Thoughts
+6. Begin working on your chosen task.
+7. If an unrelated thought, chore, or idea pops into your head during your session, use the **Save for Later** button (or press `S`) to capture it in your Distraction Inbox without leaving your focus zone.
+8. If you need a mindful pause, activate a **5m Break**.
+
+### Phase 3: Experiencing the Intent Firewall & Recovery
+9. During your work, attempt to visit a known habit website (e.g. `youtube.com`, `reddit.com`, or any non-work site under Level 4).
+10. Observe the Intent Firewall prompt.
+11. Test the two primary pathways:
+    * **Pathway A (Autopilot drift):** Click *"I got distracted — Return to Focus"*.
+    * **Pathway B (Legitimate reference need):** Request a 2-minute Intentional Exception pass. Observe the countdown banner and return once the pass expires.
+
+### Phase 4: Session Completion & Output Capture
+12. When your focus period concludes, click **Finish**.
+13. In the completion modal, record what you actually accomplished (User-Reported Deliverable) and rate your focus depth (`Deep`, `Moderate`, or `Distracted`).
+14. Open the **Attention Insights Dashboard** and inspect your daily intentional minutes, recovery speed, and completed deliverables.
 
 ---
 
-## 5. Quantitative Analytics (Processed 100% On-Device)
-* Session Start Rate (% of app opens that initiate a session).
-* Session Completion Rate (% of sessions completed without abandonment).
-* Distraction Attempt Count per hour.
-* Distraction Return Rate (% of drifts that return to goal).
-* Average Recovery Latency (seconds from drift prompt to resume).
+## 5. Facilitator Observation Checklist
+
+| Checkpoint | What to Observe | Target Behavior | Red Flags (Friction) |
+| :--- | :--- | :--- | :--- |
+| **Onboarding** | Time spent on slides, confusion | Understands "Intent over restriction" in < 45s | Asks "What does this app do?" |
+| **Intention Input** | Clarity of goal prompt | Enters goal and clicks Start immediately | Hesitates on Protection Level picker |
+| **ONE THING Mode** | Visual orientation | Understands timer and central goal immediately | Clicks around looking for navigation |
+| **Distraction Inbox** | Ease of cognitive offload | Offloads thought in < 10 seconds | Tab confusion or accidental exit |
+| **Firewall Intercept** | Emotional reaction to prompt | Feels supported/reminded ("Oh, right") | Feels scolded, annoyed, or trapped |
+| **Exception Pass** | Clarity of 2m timebox | Uses pass for quick lookup and returns | Gets trapped down a rabbit hole |
+| **Completion Flow** | Deliverable input clarity | Enters completed outcome effortlessly | Confuses deliverable with original goal |
+
+---
+
+## 6. Post-Session Interview Questions
+
+1. **Perception of Control:** *"Did ONE feel like an ally helping you protect your chosen time, or like an annoying restrictive blocker?"*
+2. **Emotional Tone & Guilt:** *"When the Intent Firewall appeared, did you feel judged or shamed? How did the language feel compared to traditional blocking apps?"*
+3. **Friction Assessment:** *"Was there any point where you felt stuck, confused, or frustrated by the controls?"*
+4. **Value of Outcome Capture:** *"How did it feel to record what you actually finished instead of just seeing a screen-time chart?"*
+5. **Protection Levels:** *"Did the difference between Level 3 (distraction block) and Level 4 (allow-list deep focus) make sense to you?"*
+6. **Voluntary Adoption:** *"Would you use ONE tomorrow morning before starting your most important task?"*
+
+---
+
+## 7. Success Criteria & Critical Failure Criteria
+
+### Success Criteria:
+* $\ge 80\%$ of participants complete a focus session and record an accomplished outcome without facilitator intervention.
+* $\ge 90\%$ of participants describe the Intent Firewall language as supportive or neutral rather than punitive.
+* Average recovery latency from drift prompt to resume is $< 25$ seconds.
+* Distraction Inbox offload takes $< 10$ seconds per thought.
+
+### Critical Failure Criteria:
+* Participant asks facilitator what they are supposed to do next after entering ONE THING mode.
+* Participant reports feeling shamed, frustrated, or patronized by recovery messaging.
+* Accidental blocking of work reference tools without a clear bypass or allow-list mechanism.
+* Participant abandons session because controls felt unresponsive or confusing.
+
+---
+
+## 8. Participant Feedback & Bug Report Template
+
+```markdown
+### Participant ID: [e.g. P-01]
+* **Cohort:** [Engineer / Student / Writer / Other]
+* **Operating System & Browser:** [e.g. Windows 11 / Chrome 124]
+* **Protection Level Tested:** [Level 1 / 2 / 3 / 4 / 5]
+* **Session Duration:** [e.g. 25 min]
+
+#### Ratings (1 to 5):
+* Clarity of Purpose: [ ]
+* Ease of Starting: [ ]
+* Supportive Tone (No shame): [ ]
+* Likelihood to Reuse: [ ]
+
+#### Observations & Quotes:
+* "..."
+
+#### Friction Points Encountered:
+1. ...
+
+#### Feature Requests / Suggestions:
+1. ...
+```

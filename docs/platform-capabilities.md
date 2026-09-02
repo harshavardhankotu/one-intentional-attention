@@ -1,47 +1,56 @@
 # ONE — Platform Capabilities & Reality Matrix
 
-> **Rule:** Never invent capabilities or pretend an OS API exists when it does not. Document official APIs, limits, and realistic architectural abstractions.
+> **Core Rule:** Clearly distinguish what is IMPLEMENTED, what is BEST-EFFORT, what is a BROWSER LIMITATION, what is NOT IMPLEMENTED, and what is reserved for FUTURE evaluation. Never describe browser-level interception as OS-level blocking.
 
 ---
 
-## Tiered Capability Classification
+## 1. Explicit Status Classification
 
-### 1. AVAILABLE NOW (Web & PWA Core)
-* **Goal & Intention Management:** "What matters right now?", duration chips, and Protection Levels (1–5).
-* **Deterministic Focus Engine:** Formal state machine with absolute timestamp-anchored timer (resilient to tab switching, computer sleep, and lid closing).
-* **Session Crash & Reload Recovery:** Automatic detection and recovery prompt if the browser reloads or crashes mid-session.
-* **In-App Intent Firewall:** Contextual dialogues ("WAIT. You said: [Goal]") with 3 pathways (distraction recovery, timed intentional exception passes, emergency exit).
-* **Distraction Inbox:** Zero-friction cognitive offloading (hotkey: `S` or `Cmd/Ctrl+K`) with item editing and archiving.
+### [IMPLEMENTED] Web Application Core
+* **Goal & Intention Management:** "What matters right now?", duration chips (15m–90m + custom), and Protection Levels 1 to 5.
+* **Deterministic Focus Engine:** State machine with wall-clock delta reconciliation (`Math.max(0, floor(now - startedAt - nonFocusMs)/1000)`), surviving tab backgrounding, OS sleep, and laptop lid closing.
+* **Session Crash & Reload Recovery:** Auto-persists active session snapshot to `localStorage`; presents recovery modal on reload with options to resume, record deliverable, or discard cleanly.
+* **In-App Intent Firewall:** Contextual dialogue ("WAIT. You committed to: [Goal]") with 3 pathways (distraction recovery, timed exception passes, emergency exit).
+* **Distraction Inbox:** Zero-friction cognitive offloading (hotkey: `S` or `Cmd/Ctrl+K`) with live search, active/archived tabs, inline editing, and restoration.
 * **Focus Rescue:** Compassionate mid-day reset with zero guilt and no streak punishments.
-* **Completed Outcomes Capture:** User-reported deliverable recording and focus quality rating.
-* **Local Attention Dashboard:** Intentional time, deep focus, recovery latency speed, and personal focus profile.
-* **100% On-Device Privacy:** Zero external network calls (no Google Fonts, no telemetry, no CDNs), full JSON export, import, and wipe.
-* **Procedural Audio Cues:** Gentle synthesized sine/triangle cues and binaural focus tone.
+* **User-Reported Deliverables:** Completed outcome recording and focus quality rating (`Deep`, `Moderate`, `Distracted`).
+* **Local Attention Dashboard:** Intentional minutes, deep focus, recovery latency speed, and personal focus profile.
+* **100% On-Device Storage & Privacy:** Zero external network calls (no CDNs, no tracking, no cloud telemetry), local Dexie IndexedDB storage, full JSON export, import with anti-corruption sanitization, and wipe.
+* **Procedural Acoustic Synthesis:** Web Audio API procedural sine/triangle transition cues and binaural focus tone (zero remote audio files).
 
 ---
 
-### 2. POSSIBLE WITH BROWSER EXTENSION (Manifest V3 Proof-of-Concept Created)
-* **Domain Navigation Interception:** Intercepting attempts to navigate to distracting websites (YouTube, Instagram, Reddit, X/Twitter).
-* **In-Page Intent Firewall Overlay:** Injecting the "WAIT." modal directly over blocked web content.
-* **Timed Exception Passes:** Temporarily allowing access to a specific site for 2–5 minutes via `chrome.alarms`.
-* **Cross-Tab Synchronization:** Sharing active intention across all open tabs via `chrome.storage.local`.
+### [IMPLEMENTED] Companion Browser Extension (Manifest V3)
+* **Secure Web-to-Extension Bridge:** Origin-validated `window.postMessage` bridge with strict schema type and boundary checks.
+* **Extension XSS Immunity:** 100% safe DOM construction (`document.createElement` + `textContent`) with zero `innerHTML`.
+* **Universal Level 4 Allow-List Enforcement:** Runs at `document_start` across `<all_urls>`, blocking non-whitelisted domains (including previously unlisted sites like `news.ycombinator.com`, `cnn.com`) while exempting the ONE app origin and configured reference domains.
+* **Level 5 Hard Lock:** Strict allow-list enforcement with no normal exception UI exposed.
+* **Timed Exception Lifecycle:** Strictly bounded to 2m or 5m durations via `chrome.alarms`, auto-expiring with immediate protection restoration.
+* **Fail-Safe Cleanup:** When no session is active or when a session completes/cancels, all blocking is immediately removed.
 
 ---
 
-### 3. POSSIBLE WITH DESKTOP WRAPPER (Tauri / Electron)
-* **Foreground Window Detection:** Identifying when the user switches to non-browser desktop apps via Win32 `GetForegroundWindow` or macOS Accessibility API.
-* **System Tray & Global Shortcuts:** Global hotkey (`Cmd/Ctrl+Shift+O`) to summon ONE from anywhere.
-* **OS Focus Mode Integration:** Triggering Windows Focus Assist or macOS Do Not Disturb.
+### [BEST-EFFORT]
+* **Background Timer Precision:** While elapsed focus math is mathematically exact upon tab refocus, browser background tab throttling may reduce visual tick frequency from 1Hz to ~0.1Hz while the tab is hidden.
+* **Offline AI Focus Coach:** Implemented as deterministic, 100% local heuristic goal-sharpening rules with zero cloud dependency.
 
 ---
 
-### 4. POSSIBLE WITH MOBILE OS APIs
-* **iOS (Screen Time API / FamilyControls):** Shielding designated application categories during active sessions. Requires Apple Family Controls entitlement.
-* **Android (UsageStatsManager & AccessibilityService):** Detecting foreground package switches and presenting overlay windows. Requires explicit user permission in Android Accessibility settings.
+### [BROWSER LIMITATION]
+* **Tab Scope Only:** The browser extension operates strictly within Chrome/Edge web tabs. It cannot monitor, detect, or block external native desktop applications (e.g. Slack desktop, Discord app, Steam, or Spotify).
+* **Protected Internal Browser Pages:** Chrome security policy strictly prohibits content scripts or declarativeNetRequest on internal pages (`chrome://`, `chrome-extension://`, Chrome Web Store).
 
 ---
 
-### 5. NOT POSSIBLE / RESTRICTED
-* **Silent Background Takeover:** Browsers and operating systems will never permit an app to forcibly close other applications without user permission.
-* **Circumvention of OS Sandboxing:** iOS does not allow arbitrary third-party code injection into other apps.
-* **Keystroke Logging / Universal Surveillance:** Restricted by platform security models (and fundamentally opposed to ONE's Privacy by Design principle).
+### [NOT IMPLEMENTED / EXPLICIT NON-GOALS FOR BETA]
+* **Native Desktop Blocking (Tauri / Electron):** Excluded from V1 to validate browser-level focus habits before introducing OS-level drivers.
+* **Social / Friends / Focus Together:** Excluded. Attention reclamation begins as an individual, introspective practice; social feeds often reintroduce comparison and distraction.
+* **Gamification / Streaks:** Intentionally rejected. Streaks introduce shame and despair when broken, conflicting with ONE's core "No shame. Ever." principle.
+* **Cloud Analytics Backend:** Excluded. All analytics remain strictly on-device to ensure total privacy sovereignty.
+* **External AI Model Dependencies:** Excluded. No LLM API calls or cloud servers are used.
+
+---
+
+### [FUTURE EVALUATION]
+* **Tauri Desktop Wrapper:** Under evaluation for post-beta consideration to provide foreground window awareness via official OS accessibility APIs without invasive surveillance.
+* **Mobile Screen Time / FamilyControls Integration:** Potential future integration for iOS/Android when mobile native apps are developed.
