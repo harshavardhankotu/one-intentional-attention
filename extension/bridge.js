@@ -4,18 +4,24 @@
 (function () {
   // Only activate on legitimate application origins
   const origin = window.location.origin;
-  const isTrustedHost =
-    origin.includes('localhost') ||
-    origin.includes('127.0.0.1') ||
-    window.location.hostname.endsWith('.github.io');
+  const isLocalDev =
+    origin === 'http://localhost:5173' ||
+    origin === 'http://localhost:3000' ||
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('http://127.0.0.1:');
+  const isProduction =
+    origin === 'https://harshavardhankotu.github.io' &&
+    window.location.pathname.startsWith('/one-intentional-attention');
 
-  if (!isTrustedHost) return;
+  const isTrustedApp = isLocalDev || isProduction;
+
+  if (!isTrustedApp) return;
 
   function notifyAppReady() {
     window.postMessage(
       {
         type: 'ONE_EXTENSION_READY',
-        version: '0.1.0',
+        version: '1.0.0',
         timestamp: Date.now()
       },
       origin

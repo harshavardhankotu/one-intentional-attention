@@ -1,13 +1,14 @@
 {
   "name": "one-intentional-attention",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package:extension": "node scripts/package-extension.js"
   },
   "dependencies": {
     "dexie": "^4.0.11",

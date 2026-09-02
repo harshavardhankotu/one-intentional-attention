@@ -73,7 +73,7 @@
       window.location.origin === appOrigin ||
       currentHost === 'localhost' ||
       currentHost === '127.0.0.1' ||
-      currentHost.endsWith('.github.io')
+      (currentHost === 'harshavardhankotu.github.io' && window.location.pathname.startsWith('/one-intentional-attention'))
     ) {
       removeOverlay();
       return;
@@ -223,7 +223,10 @@
     returnBtn.disabled = level === 2;
     returnBtn.textContent = 'I got distracted — Return to Focus';
     returnBtn.addEventListener('click', () => {
-      const appUrl = session.appOrigin || 'http://localhost:5173';
+      const baseApp = session.appOrigin || 'http://localhost:5173';
+      const appUrl = baseApp.includes('github.io')
+        ? (baseApp.endsWith('/one-intentional-attention/') ? baseApp : `${baseApp.replace(/\/$/, '')}/one-intentional-attention/`)
+        : baseApp;
       window.location.href = appUrl;
     });
     btnContainer.appendChild(returnBtn);

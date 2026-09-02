@@ -1,16 +1,18 @@
 // ONE — Offline Cache Service Worker
-const CACHE_NAME = 'one-attention-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/one-icon.svg'
-];
+const CACHE_NAME = 'one-attention-v1.0.0';
 
 self.addEventListener('install', (event) => {
+  const scope = self.registration.scope;
+  const staticAssets = [
+    new URL('./', scope).href,
+    new URL('./index.html', scope).href,
+    new URL('./manifest.json', scope).href,
+    new URL('./one-icon.svg', scope).href
+  ];
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return cache.addAll(staticAssets);
     })
   );
   self.skipWaiting();
@@ -46,7 +48,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => {
         // Fallback to cached index for navigation
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match(new URL('./index.html', self.registration.scope).href);
         }
       });
     })
