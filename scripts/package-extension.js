@@ -22,7 +22,8 @@ const releaseFiles = [
   'bridge.js',
   'content.js',
   'popup.html',
-  'one-icon.svg'
+  'one-icon.svg',
+  'one-icon.png'
 ];
 
 for (const file of releaseFiles) {

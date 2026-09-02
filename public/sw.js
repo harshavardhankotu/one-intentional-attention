@@ -7,7 +7,8 @@ self.addEventListener('install', (event) => {
     new URL('./', scope).href,
     new URL('./index.html', scope).href,
     new URL('./manifest.json', scope).href,
-    new URL('./one-icon.svg', scope).href
+    new URL('./one-icon.svg', scope).href,
+    new URL('./one-icon.png', scope).href
   ];
 
   event.waitUntil(

@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Companion browser extension for ONE. Intent Firewall protection and Intentional Exceptions.",
   "icons": {
-    "128": "one-icon.svg"
+    "128": "one-icon.png"
   },
   "permissions": [
     "storage",
@@ -39,6 +39,6 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "ONE — One thing. Right now.",
-    "default_icon": "one-icon.svg"
+    "default_icon": "one-icon.png"
   }
 }
