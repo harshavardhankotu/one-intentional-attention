@@ -1,6 +1,9 @@
 /**
- * Web Audio Harmonic Synthesizer for ONE
- * Generates pure, organic, calming acoustic tones without external audio files.
+ * Procedural Audio Synthesizer for ONE
+ * Generates neutral, calming acoustic cues without external audio files or network requests.
+ * 
+ * NOTE: Frequencies and tones used are designed strictly as acoustic transition cues
+ * and auditory feedback. They make no therapeutic, medical, or cognitive enhancement claims.
  */
 class AudioService {
   private ctx: AudioContext | null = null;
@@ -35,7 +38,7 @@ class AudioService {
 
   /**
    * Session Start: Dual resonant sine tones (528 Hz + 660 Hz)
-   * Calming, grounding frequency.
+   * Serves as a clear, gentle auditory transition cue.
    */
   public playSessionStart() {
     if (this.isMuted) return;
@@ -63,8 +66,8 @@ class AudioService {
   }
 
   /**
-   * Drift Nudge: Soft singing bowl acoustic tone (396 Hz)
-   * Non-alarmist, mindful reminder.
+   * Drift Nudge: Soft triangle acoustic cue (396 Hz)
+   * Serves as a neutral, non-alarmist reminder to re-evaluate current activity.
    */
   public playDriftNudge() {
     if (this.isMuted) return;
@@ -90,8 +93,8 @@ class AudioService {
   }
 
   /**
-   * Session Complete: Harmonious major triad (528 Hz, 660 Hz, 792 Hz)
-   * Celebratory and serene.
+   * Session Complete: Resonant triad (528 Hz, 660 Hz, 792 Hz)
+   * Auditory indicator that the target focus interval has elapsed.
    */
   public playSessionComplete() {
     if (this.isMuted) return;
@@ -119,7 +122,7 @@ class AudioService {
   }
 
   /**
-   * Cognitive Offload Click (Distraction Inbox save): Crisp, soft wooden tick
+   * Cognitive Offload Cue: Crisp, subtle click indicating note was captured
    */
   public playCaptureTick() {
     if (this.isMuted) return;
@@ -145,7 +148,7 @@ class AudioService {
   }
 
   /**
-   * Ambient Focus Binaural Drone
+   * Optional Ambient Focus Tone: Low filtered sine wave (144 Hz) for auditory masking
    */
   public toggleAmbientFocus(enable: boolean) {
     const ctx = this.getContext();
@@ -172,7 +175,7 @@ class AudioService {
     const filter = ctx.createBiquadFilter();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(144, now); // Low calming fundamental C3
+    osc.frequency.setValueAtTime(144, now);
 
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(250, now);

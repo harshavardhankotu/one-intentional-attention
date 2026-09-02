@@ -2,14 +2,20 @@ export type ProtectionLevel = 1 | 2 | 3 | 4 | 5;
 
 export type FocusRating = 'deep' | 'moderate' | 'fragmented';
 
+/**
+ * Formalized Focus Session State Machine States
+ */
 export type SessionStatus = 
   | 'idle' 
   | 'focusing' 
+  | 'paused'
   | 'break' 
-  | 'intercepted' 
-  | 'exception_pass' 
-  | 'completing' 
-  | 'rescued';
+  | 'interrupted' 
+  | 'exception' 
+  | 'completing'
+  | 'completed' 
+  | 'cancelled'
+  | 'recovered';
 
 export interface Intention {
   id: string;
@@ -26,10 +32,11 @@ export interface FocusSession {
   intentionTitle: string;
   targetDurationSeconds: number;
   elapsedSeconds: number;
-  status: 'completed' | 'abandoned' | 'rescued';
+  status: 'focusing' | 'completed' | 'cancelled' | 'rescued';
   protectionLevel: ProtectionLevel;
   startedAt: number;
   endedAt: number;
+  totalPausedMs: number;
   driftCount: number;
   totalRecoverySeconds: number;
   intentionalExceptionsCount: number;
@@ -54,7 +61,7 @@ export interface DistractionItem {
   sessionId?: string;
   content: string;
   createdAt: number;
-  status: 'inbox' | 'actioned' | 'dismissed';
+  status: 'inbox' | 'archived' | 'actioned' | 'dismissed';
 }
 
 export interface CompletedOutcome {
@@ -94,4 +101,21 @@ export interface FocusProfile {
   bestFocusHourWindow: string;
   topTriggers: { trigger: string; count: number }[];
   interventionSuccessRate: number;
+}
+
+/**
+ * Persisted session state for crash and refresh recovery
+ */
+export interface PersistedSessionState {
+  version: number;
+  session: FocusSession;
+  intention: Intention;
+  status: SessionStatus;
+  startedAt: number;
+  totalPausedMs: number;
+  lastPausedAt: number | null;
+  targetDurationSeconds: number;
+  exceptionPass: ExceptionPass | null;
+  activeDriftEvent: DriftEvent | null;
+  lastSavedAt: number;
 }

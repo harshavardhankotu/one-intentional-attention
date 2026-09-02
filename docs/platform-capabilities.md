@@ -4,42 +4,44 @@
 
 ---
 
-## 1. Operating System & Platform Capabilities
+## Tiered Capability Classification
 
-### 1.1 Web & Progressive Web App (PWA) — Current Core Target
-* **Capabilities:**
-  * High-precision background timers via Web Workers.
-  * Web Audio API for harmonic chimes and focus sounds.
-  * IndexedDB for massive local storage (> 1GB).
-  * System Notification API for session transition nudges.
-  * Wake Lock API (`navigator.wakeLock.request('screen')`) to prevent display sleep during ONE THING MODE.
-* **Limitations:**
-  * Cannot close or block external desktop applications (e.g. native Discord, Telegram, or Steam) directly from a web page without an installed helper or extension.
-  * Tab switching can be detected via `document.visibilityState` / `visibilitychange` and `window.onblur`.
+### 1. AVAILABLE NOW (Web & PWA Core)
+* **Goal & Intention Management:** "What matters right now?", duration chips, and Protection Levels (1–5).
+* **Deterministic Focus Engine:** Formal state machine with absolute timestamp-anchored timer (resilient to tab switching, computer sleep, and lid closing).
+* **Session Crash & Reload Recovery:** Automatic detection and recovery prompt if the browser reloads or crashes mid-session.
+* **In-App Intent Firewall:** Contextual dialogues ("WAIT. You said: [Goal]") with 3 pathways (distraction recovery, timed intentional exception passes, emergency exit).
+* **Distraction Inbox:** Zero-friction cognitive offloading (hotkey: `S` or `Cmd/Ctrl+K`) with item editing and archiving.
+* **Focus Rescue:** Compassionate mid-day reset with zero guilt and no streak punishments.
+* **Completed Outcomes Capture:** User-reported deliverable recording and focus quality rating.
+* **Local Attention Dashboard:** Intentional time, deep focus, recovery latency speed, and personal focus profile.
+* **100% On-Device Privacy:** Zero external network calls (no Google Fonts, no telemetry, no CDNs), full JSON export, import, and wipe.
+* **Procedural Audio Cues:** Gentle synthesized sine/triangle cues and binaural focus tone.
 
-### 1.2 Browser Extension (Chrome / Edge / Firefox — Manifest V3)
-* **Capabilities:**
-  * `chrome.declarativeNetRequest`: High-performance, privacy-preserving blocking or redirecting of distracting domains.
-  * `chrome.webNavigation.onBeforeNavigate`: Interception before page loads.
-  * Content Script injection: Renders the ONE **Intent Firewall Overlay** directly inside distracting web pages (*"WAIT. You said: [Goal]. 42 minutes remain. What happened?"*).
-  * Timed Exception Passes: Temporary rule disablement for 2–5 minutes.
-* **Limitations:**
-  * Restricted to browser activities; does not block native desktop apps.
-  * MV3 background service workers are ephemeral and cannot maintain persistent state in RAM; must rely on `chrome.storage.local` and `chrome.alarms`.
+---
 
-### 1.3 Desktop (Windows & macOS via Tauri / Electron)
-* **Capabilities:**
-  * Active window tracking via Win32 API (`GetForegroundWindow`) and macOS Accessibility API.
-  * System tray integration, global keyboard shortcuts (`Cmd/Ctrl + Shift + O` to open ONE).
-  * Focus Assist / Do Not Disturb integration (Windows Focus Assist API, macOS `NSDistributedNotificationCenter`).
-* **Limitations:**
-  * Requires explicit OS accessibility and automation permissions from the user.
-  * Aggressive process killing can cause data loss; ONE prefers foreground window redirection and overlay friction over process termination.
+### 2. POSSIBLE WITH BROWSER EXTENSION (Manifest V3 Proof-of-Concept Created)
+* **Domain Navigation Interception:** Intercepting attempts to navigate to distracting websites (YouTube, Instagram, Reddit, X/Twitter).
+* **In-Page Intent Firewall Overlay:** Injecting the "WAIT." modal directly over blocked web content.
+* **Timed Exception Passes:** Temporarily allowing access to a specific site for 2–5 minutes via `chrome.alarms`.
+* **Cross-Tab Synchronization:** Sharing active intention across all open tabs via `chrome.storage.local`.
 
-### 1.4 Mobile Platforms (iOS & Android)
-* **iOS:**
-  * **Official API:** `Screen Time API` (`FamilyControls`, `ManagedSettings`, `DeviceActivity`). Introduced in iOS 16+.
-  * **Limitations:** Requires Apple Developer entitlement for Family Controls; strict sandboxing. No custom UI can be rendered inside third-party apps, but `DeviceActivityMonitor` can enforce app shields.
-* **Android:**
-  * **Official API:** `UsageStatsManager` (detect foreground package), `AccessibilityService` (overlay window insertion), `NotificationListenerService`.
-  * **Limitations:** Background battery optimization can kill background services unless battery optimization is disabled; Play Store scrutinizes `AccessibilityService` usage heavily.
+---
+
+### 3. POSSIBLE WITH DESKTOP WRAPPER (Tauri / Electron)
+* **Foreground Window Detection:** Identifying when the user switches to non-browser desktop apps via Win32 `GetForegroundWindow` or macOS Accessibility API.
+* **System Tray & Global Shortcuts:** Global hotkey (`Cmd/Ctrl+Shift+O`) to summon ONE from anywhere.
+* **OS Focus Mode Integration:** Triggering Windows Focus Assist or macOS Do Not Disturb.
+
+---
+
+### 4. POSSIBLE WITH MOBILE OS APIs
+* **iOS (Screen Time API / FamilyControls):** Shielding designated application categories during active sessions. Requires Apple Family Controls entitlement.
+* **Android (UsageStatsManager & AccessibilityService):** Detecting foreground package switches and presenting overlay windows. Requires explicit user permission in Android Accessibility settings.
+
+---
+
+### 5. NOT POSSIBLE / RESTRICTED
+* **Silent Background Takeover:** Browsers and operating systems will never permit an app to forcibly close other applications without user permission.
+* **Circumvention of OS Sandboxing:** iOS does not allow arbitrary third-party code injection into other apps.
+* **Keystroke Logging / Universal Surveillance:** Restricted by platform security models (and fundamentally opposed to ONE's Privacy by Design principle).

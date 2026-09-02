@@ -7,10 +7,17 @@ import { IntentFirewallModal } from './components/IntentFirewallModal';
 import { DistractionInboxModal } from './components/DistractionInboxModal';
 import { FocusRescueModal } from './components/FocusRescueModal';
 import { SessionCompleteModal } from './components/SessionCompleteModal';
+import { SessionRecoveryModal } from './components/SessionRecoveryModal';
 import { AttentionDashboard } from './components/AttentionDashboard';
 
 const MainContent: React.FC = () => {
-  const { status } = useFocus();
+  const {
+    status,
+    recoveredSessionState,
+    resumeRecoveredSession,
+    finishRecoveredSession,
+    discardRecoveredSession
+  } = useFocus();
 
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(() => {
     return localStorage.getItem('one_onboarding_completed') === 'true';
@@ -38,6 +45,16 @@ const MainContent: React.FC = () => {
         <IntentionSetup onOpenDashboard={() => setCurrentView('dashboard')} />
       ) : (
         <OneThingMode />
+      )}
+
+      {/* Crash / Refresh Recovery Dialog */}
+      {recoveredSessionState && (
+        <SessionRecoveryModal
+          recoveredState={recoveredSessionState}
+          onResume={resumeRecoveredSession}
+          onEndAndRecord={finishRecoveredSession}
+          onDiscard={discardRecoveredSession}
+        />
       )}
 
       {/* Dynamic Overlays & Modals */}

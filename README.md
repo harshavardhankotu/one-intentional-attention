@@ -39,9 +39,9 @@ Existing products primarily approach this through **app blocking**, **screen-tim
   * *Emergency* → Graceful exit without guilt or streak penalties.
 * **Distraction Inbox ("Save for Later"):** Cognitive offloading buffer (hotkey: `S` or `Cmd/Ctrl+K`) allowing users to dump stray thoughts without derailing focus.
 * **Focus Rescue ("Rescue Me"):** For days where momentum was lost: *"You haven't lost the day. What needs your attention now?"*
-* **Session Completion & Outcome Capture:** *"What did you accomplish?"* — Records verified deliverables and focus quality (Deep, Moderate, Fragmented).
+* **Session Completion & Outcome Capture:** *"What did you accomplish?"* — Records user-reported deliverables and focus quality (Deep, Moderate, Fragmented).
 * **Attention Dashboard:** Measures Intentional Time, Deep Focus, Recovered Time, Average Recovery Speed (e.g. 38s), and Personal Focus Profiles.
-* **Web Audio Harmonic Synthesizer:** Pure synthesized harmonic chimes (528 Hz Love frequency) and calming binaural focus drone.
+* **Procedural Audio Cues:** Gentle synthesized sine/triangle cues for session transitions and optional acoustic focus masking.
 * **Data Sovereignty:** One-click JSON backup export and instant local database wipe.
 
 ---

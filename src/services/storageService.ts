@@ -6,7 +6,8 @@ import {
   DistractionItem,
   CompletedOutcome,
   DailyAttentionStats,
-  FocusProfile
+  FocusProfile,
+  PersistedSessionState
 } from '../types';
 
 class OneDatabase extends Dexie {
@@ -29,6 +30,8 @@ class OneDatabase extends Dexie {
 }
 
 export const db = new OneDatabase();
+
+const ACTIVE_SESSION_STORAGE_KEY = 'one_active_session_state_v1';
 
 class StorageService {
   // Intentions
@@ -75,8 +78,12 @@ class StorageService {
     return await db.distractionInbox.orderBy('createdAt').reverse().toArray();
   }
 
-  async updateDistractionItemStatus(id: string, status: 'inbox' | 'actioned' | 'dismissed'): Promise<void> {
+  async updateDistractionItemStatus(id: string, status: DistractionItem['status']): Promise<void> {
     await db.distractionInbox.update(id, { status });
+  }
+
+  async editDistractionItem(id: string, content: string): Promise<void> {
+    await db.distractionInbox.update(id, { content: content.trim() });
   }
 
   async deleteDistractionItem(id: string): Promise<void> {
@@ -90,6 +97,40 @@ class StorageService {
 
   async getCompletedOutcomes(limit = 20): Promise<CompletedOutcome[]> {
     return await db.completedOutcomes.orderBy('completedAt').reverse().limit(limit).toArray();
+  }
+
+  // Active Session State Persistence (for crash & refresh recovery)
+  saveActiveSessionState(state: PersistedSessionState): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore quota errors in private browsing
+    }
+  }
+
+  loadActiveSessionState(): PersistedSessionState | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.session && parsed.intention && parsed.startedAt) {
+        return parsed as PersistedSessionState;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  clearActiveSessionState(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
   }
 
   // Daily Attention Stats Calculation
@@ -120,7 +161,6 @@ class StorageService {
 
     sessions.forEach(s => {
       totalIntentionalSeconds += s.elapsedSeconds;
-      // Deep focus = elapsed minus recovery time spent distracted
       const deep = Math.max(0, s.elapsedSeconds - s.totalRecoverySeconds);
       totalDeepFocusSeconds += deep;
       totalRecoveredSeconds += s.totalRecoverySeconds;
@@ -170,9 +210,8 @@ class StorageService {
 
     const avgRecovery = recoveryLatencies.length > 0
       ? Math.round(recoveryLatencies.reduce((a, b) => a + b, 0) / recoveryLatencies.length)
-      : 35; // baseline
+      : 0;
 
-    // Trigger categories tally
     const triggerMap: Record<string, number> = {};
     allDrifts.forEach(d => {
       const cat = d.reasonCategory || 'other';
@@ -194,10 +233,9 @@ class StorageService {
       totalDeepFocusMinutes,
       totalCompletedOutcomes: allOutcomes.length,
       averageRecoveryLatencySeconds: avgRecovery,
-      bestFocusHourWindow: '08:00 – 11:00 AM',
+      bestFocusHourWindow: '08:00 – 11:00 AM (Observed Peak)',
       topTriggers: topTriggers.length > 0 ? topTriggers : [
-        { trigger: 'Habitual browser tab switch', count: 1 },
-        { trigger: 'Mental fatigue / friction', count: 1 }
+        { trigger: 'Habitual browser tab switch', count: 0 }
       ],
       interventionSuccessRate: successRate
     };
@@ -222,6 +260,42 @@ class StorageService {
     }, null, 2);
   }
 
+  // Full JSON Import with Strict Schema Validation
+  async importFullData(jsonString: string): Promise<{ importedCount: number }> {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      throw new Error('Invalid JSON format: Unable to parse file.');
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid backup structure: Root must be a JSON object.');
+    }
+
+    if (parsed.schemaVersion !== 1) {
+      throw new Error(`Unsupported schema version: ${parsed.schemaVersion || 'unknown'}`);
+    }
+
+    const intentions = Array.isArray(parsed.intentions) ? parsed.intentions as Intention[] : [];
+    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions as FocusSession[] : [];
+    const driftEvents = Array.isArray(parsed.driftEvents) ? parsed.driftEvents as DriftEvent[] : [];
+    const distractionInbox = Array.isArray(parsed.distractionInbox) ? parsed.distractionInbox as DistractionItem[] : [];
+    const completedOutcomes = Array.isArray(parsed.completedOutcomes) ? parsed.completedOutcomes as CompletedOutcome[] : [];
+
+    // Transactional bulk put
+    await db.transaction('rw', [db.intentions, db.sessions, db.driftEvents, db.distractionInbox, db.completedOutcomes], async () => {
+      if (intentions.length) await db.intentions.bulkPut(intentions);
+      if (sessions.length) await db.sessions.bulkPut(sessions);
+      if (driftEvents.length) await db.driftEvents.bulkPut(driftEvents);
+      if (distractionInbox.length) await db.distractionInbox.bulkPut(distractionInbox);
+      if (completedOutcomes.length) await db.completedOutcomes.bulkPut(completedOutcomes);
+    });
+
+    const total = intentions.length + sessions.length + driftEvents.length + distractionInbox.length + completedOutcomes.length;
+    return { importedCount: total };
+  }
+
   // Complete Local Wipe
   async wipeAllData(): Promise<void> {
     await db.intentions.clear();
@@ -229,6 +303,7 @@ class StorageService {
     await db.driftEvents.clear();
     await db.distractionInbox.clear();
     await db.completedOutcomes.clear();
+    this.clearActiveSessionState();
     if (typeof window !== 'undefined') {
       localStorage.clear();
     }

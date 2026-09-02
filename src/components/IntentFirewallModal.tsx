@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFocus } from '../context/FocusContext';
 import { ArrowLeft, CheckCircle2, ShieldAlert, Sparkles, Clock, AlertTriangle } from 'lucide-react';
 
 export const IntentFirewallModal: React.FC = () => {
   const {
+    status,
     activeIntention,
     elapsedSeconds,
     targetDurationSeconds,
@@ -17,6 +18,30 @@ export const IntentFirewallModal: React.FC = () => {
   const [customReason, setCustomReason] = useState('');
   const [exceptionDuration, setExceptionDuration] = useState<number>(2);
 
+  // Keyboard shortcut options: 1 for return, 2 for exception, 3 for emergency
+  useEffect(() => {
+    if (status !== 'interrupted') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (step === 'decision') {
+        if (e.key === '1') {
+          resolveDistraction();
+        } else if (e.key === '2') {
+          setStep('exception_reason');
+        } else if (e.key === '3') {
+          emergencyExit();
+        }
+      } else if (step === 'exception_reason' && e.key === 'Escape') {
+        setStep('decision');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [status, step, resolveDistraction, emergencyExit]);
+
+  if (status !== 'interrupted') return null;
+
   const remainingSeconds = Math.max(0, targetDurationSeconds - elapsedSeconds);
   const remainingMinutes = Math.ceil(remainingSeconds / 60);
 
@@ -29,7 +54,12 @@ export const IntentFirewallModal: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-obsidian-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="firewall-title"
+      className="fixed inset-0 z-50 bg-obsidian-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in"
+    >
       <div className="max-w-lg w-full glass-panel rounded-3xl p-8 border border-amber-500/40 shadow-2xl relative overflow-hidden">
         {/* Amber spotlight glow */}
         <div className="absolute -top-20 -right-20 w-44 h-44 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -45,7 +75,7 @@ export const IntentFirewallModal: React.FC = () => {
               </span>
             </div>
 
-            <h2 className="text-3xl font-light text-white tracking-tight mb-2">
+            <h2 id="firewall-title" className="text-3xl font-light text-white tracking-tight mb-2">
               WAIT.
             </h2>
 
@@ -81,9 +111,9 @@ export const IntentFirewallModal: React.FC = () => {
                     Return to your goal. We'll record your quick recovery with zero shame.
                   </p>
                 </div>
-                <span className="px-2 py-1 text-[11px] font-mono text-emerald-300 bg-emerald-500/10 rounded-md">
-                  Return
-                </span>
+                <kbd className="px-2 py-1 text-[11px] font-mono text-emerald-300 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                  1
+                </kbd>
               </button>
 
               {/* Option 2: Specific intentional reason */}
@@ -100,9 +130,9 @@ export const IntentFirewallModal: React.FC = () => {
                     Grant a controlled, timed intentional exception pass.
                   </p>
                 </div>
-                <span className="px-2 py-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 rounded-md">
-                  Exception
-                </span>
+                <kbd className="px-2 py-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 rounded-md border border-amber-500/20">
+                  2
+                </kbd>
               </button>
 
               {/* Option 3: Emergency Exit */}
@@ -114,9 +144,9 @@ export const IntentFirewallModal: React.FC = () => {
                   <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />
                   <span>Emergency or need to stop</span>
                 </div>
-                <span className="text-[11px] text-slate-500 font-mono">
-                  Graceful exit
-                </span>
+                <kbd className="text-[11px] text-slate-500 font-mono px-2 py-0.5 rounded bg-obsidian-950 border border-obsidian-800">
+                  3
+                </kbd>
               </button>
             </div>
           </div>
@@ -129,7 +159,7 @@ export const IntentFirewallModal: React.FC = () => {
                 className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Back
+                Back (Esc)
               </button>
               <span className="text-xs font-mono uppercase tracking-wider text-amber-400">
                 Intentional Exception

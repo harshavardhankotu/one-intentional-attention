@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "ONE — Intentional Attention Bridge",
+  "version": "0.1.0",
+  "description": "Companion browser extension for ONE. Intent Firewall protection and Intentional Exceptions.",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "*://*.instagram.com/*",
+    "*://*.youtube.com/*",
+    "*://*.reddit.com/*",
+    "*://*.twitter.com/*",
+    "*://*.x.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.instagram.com/*",
+        "*://*.youtube.com/*",
+        "*://*.reddit.com/*",
+        "*://*.twitter.com/*",
+        "*://*.x.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ONE — One thing. Right now."
+  }
+}

@@ -10,7 +10,9 @@ import {
   LifeBuoy,
   CheckCircle,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Pause,
+  Play
 } from 'lucide-react';
 
 export const OneThingMode: React.FC = () => {
@@ -21,6 +23,8 @@ export const OneThingMode: React.FC = () => {
     targetDurationSeconds,
     status,
     exceptionPass,
+    pauseSession,
+    resumeSession,
     triggerIntentFirewall,
     openDistractionInbox,
     startBreak,
@@ -32,7 +36,7 @@ export const OneThingMode: React.FC = () => {
     toggleAmbientSound
   } = useFocus();
 
-  // Keyboard shortcut listener: Cmd/Ctrl+K or 's' opens distraction inbox
+  // Keyboard shortcut listener: Cmd/Ctrl+K or 's' opens distraction inbox, Space toggles pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -40,11 +44,18 @@ export const OneThingMode: React.FC = () => {
         openDistractionInbox();
       } else if (e.key === 's' && document.activeElement?.tagName !== 'INPUT') {
         openDistractionInbox();
+      } else if (e.key === ' ' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'BUTTON') {
+        e.preventDefault();
+        if (status === 'focusing') {
+          pauseSession();
+        } else if (status === 'paused') {
+          resumeSession();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openDistractionInbox]);
+  }, [openDistractionInbox, status, pauseSession, resumeSession]);
 
   const remainingSeconds = Math.max(0, targetDurationSeconds - elapsedSeconds);
   const minutes = Math.floor(remainingSeconds / 60);
@@ -69,32 +80,48 @@ export const OneThingMode: React.FC = () => {
   const exceptionMins = Math.floor(exceptionRemainingSeconds / 60);
   const exceptionSecs = exceptionRemainingSeconds % 60;
 
+  const isPaused = status === 'paused';
+  const isException = status === 'exception' || (status as string) === 'exception_pass';
+
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-between p-6 bg-obsidian-950 select-none overflow-hidden">
       {/* Subtle background ambient pulse */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-3xl animate-breathe" />
+        <div className={`w-[500px] h-[500px] rounded-full blur-3xl transition-all duration-1000 ${
+          isPaused ? 'bg-slate-500/5' : 'bg-amber-500/5 animate-breathe'
+        }`} />
       </div>
 
       {/* Top Header / Intention Badge */}
       <header className="w-full max-w-2xl flex items-center justify-between z-10 pt-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-900 border border-obsidian-700/80">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <span className={`w-2 h-2 rounded-full ${isPaused ? 'bg-slate-400' : 'bg-amber-400 animate-pulse'}`} />
           <span className="text-xs font-mono text-slate-300 uppercase tracking-wider">
-            ONE THING MODE • Level {activeIntention?.protectionLevel || 3}
+            {isPaused ? 'PAUSED' : `ONE THING MODE • Level ${activeIntention?.protectionLevel || 3}`}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Pause / Resume button */}
+          <button
+            onClick={isPaused ? resumeSession : pauseSession}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono text-slate-300 bg-obsidian-900 border border-obsidian-800 hover:bg-obsidian-800 transition-all cursor-pointer"
+            title={isPaused ? "Resume focus" : "Pause timer"}
+          >
+            {isPaused ? <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> : <Pause className="w-3.5 h-3.5" />}
+            <span>{isPaused ? 'Resume' : 'Pause'}</span>
+          </button>
+
           {/* Ambient Noise */}
           <button
             onClick={toggleAmbientSound}
-            className={`p-2 rounded-full transition-all ${
+            aria-label="Toggle focus sound"
+            className={`p-2 rounded-full transition-all cursor-pointer ${
               isAmbientSoundActive
                 ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                 : 'text-slate-400 hover:text-white bg-obsidian-900 border border-obsidian-800'
             }`}
-            title="Focus Sound (Calm Binaural Wave)"
+            title="Focus Sound (Calm Binaural Tone)"
           >
             <Radio className="w-4 h-4" />
           </button>
@@ -102,7 +129,8 @@ export const OneThingMode: React.FC = () => {
           {/* Sound Mute */}
           <button
             onClick={toggleMute}
-            className="p-2 rounded-full text-slate-400 hover:text-white bg-obsidian-900 border border-obsidian-800 transition-all"
+            aria-label={isAudioMuted ? "Unmute Harmonic Chimes" : "Mute Sound"}
+            className="p-2 rounded-full text-slate-400 hover:text-white bg-obsidian-900 border border-obsidian-800 transition-all cursor-pointer"
             title={isAudioMuted ? "Unmute Harmonic Chimes" : "Mute Sound"}
           >
             {isAudioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -111,7 +139,7 @@ export const OneThingMode: React.FC = () => {
       </header>
 
       {/* Active Exception Pass Banner */}
-      {status === 'exception_pass' && exceptionPass && (
+      {isException && exceptionPass && (
         <div className="z-20 w-full max-w-md my-2 px-4 py-2.5 rounded-2xl bg-amber-500/15 border border-amber-400/40 backdrop-blur-md flex items-center justify-between animate-fade-in shadow-lg">
           <div className="flex items-center gap-2.5">
             <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
@@ -126,7 +154,7 @@ export const OneThingMode: React.FC = () => {
           </div>
           <button
             onClick={() => triggerIntentFirewall()}
-            className="px-2.5 py-1 text-xs font-medium bg-amber-400 text-obsidian-950 rounded-lg hover:bg-amber-300 transition-all flex items-center gap-1"
+            className="px-2.5 py-1 text-xs font-medium bg-amber-400 text-obsidian-950 rounded-lg hover:bg-amber-300 transition-all flex items-center gap-1 cursor-pointer"
           >
             Done Early <ArrowRight className="w-3 h-3" />
           </button>
@@ -152,7 +180,7 @@ export const OneThingMode: React.FC = () => {
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="#F59E0B"
+              stroke={isPaused ? '#64748B' : '#F59E0B'}
               strokeWidth={strokeWidth}
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
@@ -165,9 +193,9 @@ export const OneThingMode: React.FC = () => {
           {/* Time & Center Content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
             <span className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-1">
-              Time Remaining
+              {isPaused ? 'SESSION PAUSED' : 'Time Remaining'}
             </span>
-            <div className="text-6xl font-extralight tracking-tighter text-white font-mono mb-2">
+            <div className={`text-6xl font-extralight tracking-tighter font-mono mb-2 ${isPaused ? 'text-slate-400' : 'text-white'}`}>
               {timeFormatted}
             </div>
             <span className="text-xs font-mono text-amber-400/80">
@@ -232,6 +260,7 @@ export const OneThingMode: React.FC = () => {
           {/* Rescue Me */}
           <button
             onClick={openRescueModal}
+            aria-label="Rescue focus session"
             className="flex items-center justify-center gap-1.5 py-2.5 px-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 bg-obsidian-850 hover:bg-obsidian-700 border border-obsidian-700/80 transition-all cursor-pointer"
             title="Reset cleanly if you lost momentum"
           >

@@ -10,10 +10,12 @@ import {
   SessionStatus,
   ProtectionLevel,
   FocusRating,
-  ExceptionPass
+  ExceptionPass,
+  PersistedSessionState
 } from '../types';
 import { storageService } from '../services/storageService';
 import { audioService } from '../services/audioService';
+import { transitionFocusState } from '../services/focusStateMachine';
 
 interface FocusContextType {
   status: SessionStatus;
@@ -24,6 +26,8 @@ interface FocusContextType {
   breakRemainingSeconds: number;
   exceptionPass: ExceptionPass | null;
   activeDriftEvent: DriftEvent | null;
+  recoveredSessionState: PersistedSessionState | null;
+
   isDistractionInboxOpen: boolean;
   isRescueModalOpen: boolean;
   isAudioMuted: boolean;
@@ -35,6 +39,8 @@ interface FocusContextType {
   
   // Actions
   startSession: (title: string, durationMinutes: number, protectionLevel?: ProtectionLevel, category?: Intention['category']) => Promise<void>;
+  pauseSession: () => void;
+  resumeSession: () => void;
   triggerIntentFirewall: () => void;
   resolveDistraction: () => Promise<void>;
   grantIntentionalException: (reason: string, durationMinutes: number) => Promise<void>;
@@ -47,14 +53,20 @@ interface FocusContextType {
   closeRescueModal: () => void;
   applyFocusRescue: (minutes: number, newGoal?: string) => Promise<void>;
   saveDistractionNote: (content: string) => Promise<void>;
+  archiveDistractionItem: (id: string) => Promise<void>;
+  editDistractionItem: (id: string, content: string) => Promise<void>;
+  deleteDistractionItem: (id: string) => Promise<void>;
   openDistractionInbox: () => void;
   closeDistractionInbox: () => void;
-  deleteDistractionItem: (id: string) => Promise<void>;
   toggleMute: () => void;
   toggleAmbientSound: () => void;
   refreshData: () => Promise<void>;
   exportData: () => Promise<string>;
+  importData: (jsonString: string) => Promise<{ importedCount: number }>;
   wipeData: () => Promise<void>;
+  resumeRecoveredSession: () => void;
+  finishRecoveredSession: () => void;
+  discardRecoveredSession: () => void;
 }
 
 const FocusContext = createContext<FocusContextType | undefined>(undefined);
@@ -63,11 +75,20 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [status, setStatus] = useState<SessionStatus>('idle');
   const [activeIntention, setActiveIntention] = useState<Intention | null>(null);
   const [activeSession, setActiveSession] = useState<FocusSession | null>(null);
+
+  // Absolute Timestamp Timer Anchors
+  const startedAtRef = useRef<number>(0);
+  const totalPausedMsRef = useRef<number>(0);
+  const lastPausedAtRef = useRef<number | null>(null);
+
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [targetDurationSeconds, setTargetDurationSeconds] = useState<number>(0);
   const [breakRemainingSeconds, setBreakRemainingSeconds] = useState<number>(0);
   const [exceptionPass, setExceptionPass] = useState<ExceptionPass | null>(null);
   const [activeDriftEvent, setActiveDriftEvent] = useState<DriftEvent | null>(null);
+
+  // Session recovery state
+  const [recoveredSessionState, setRecoveredSessionState] = useState<PersistedSessionState | null>(null);
 
   const [isDistractionInboxOpen, setIsDistractionInboxOpen] = useState(false);
   const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
@@ -95,25 +116,66 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCompletedOutcomes(outcomes);
   }, []);
 
+  // Check for crash/refresh recovery on mount
   useEffect(() => {
     refreshData();
+    const persisted = storageService.loadActiveSessionState();
+    if (persisted && (persisted.status === 'focusing' || persisted.status === 'paused' || persisted.status === 'interrupted' || persisted.status === 'exception')) {
+      setRecoveredSessionState(persisted);
+    }
   }, [refreshData]);
 
-  // Main session timer tick
+  // Persist session state periodically & on important changes
+  const syncActiveSessionState = useCallback(() => {
+    if (!activeSession || !activeIntention || status === 'idle' || status === 'completed' || status === 'cancelled') {
+      storageService.clearActiveSessionState();
+      return;
+    }
+
+    const state: PersistedSessionState = {
+      version: 1,
+      session: {
+        ...activeSession,
+        elapsedSeconds,
+        totalPausedMs: totalPausedMsRef.current,
+      },
+      intention: activeIntention,
+      status,
+      startedAt: startedAtRef.current,
+      totalPausedMs: totalPausedMsRef.current,
+      lastPausedAt: lastPausedAtRef.current,
+      targetDurationSeconds,
+      exceptionPass,
+      activeDriftEvent,
+      lastSavedAt: Date.now()
+    };
+
+    storageService.saveActiveSessionState(state);
+  }, [activeSession, activeIntention, status, elapsedSeconds, targetDurationSeconds, exceptionPass, activeDriftEvent]);
+
+  // Absolute Timestamp Timer Tick
   useEffect(() => {
-    if (status === 'focusing' || status === 'exception_pass') {
+    if (status === 'focusing' || status === 'exception' || status === 'interrupted') {
       timerRef.current = setInterval(() => {
-        setElapsedSeconds(prev => {
-          const next = prev + 1;
-          if (targetDurationSeconds > 0 && next >= targetDurationSeconds) {
-            // Target reached!
-            audioService.playSessionComplete();
-            setStatus('completing');
-            return next;
-          }
-          return next;
-        });
-      }, 1000);
+        const now = Date.now();
+        const currentPauseDelta = lastPausedAtRef.current ? (now - lastPausedAtRef.current) : 0;
+        const totalNonFocusMs = totalPausedMsRef.current + currentPauseDelta;
+        const actualElapsed = Math.max(0, Math.floor((now - startedAtRef.current - totalNonFocusMs) / 1000));
+
+        setElapsedSeconds(actualElapsed);
+
+        // Target reached
+        if (targetDurationSeconds > 0 && actualElapsed >= targetDurationSeconds) {
+          audioService.playSessionComplete();
+          setStatus(prev => {
+            try {
+              return transitionFocusState(prev, { type: 'PROMPT_COMPLETION' });
+            } catch {
+              return 'completing';
+            }
+          });
+        }
+      }, 500);
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -129,6 +191,13 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [status, targetDurationSeconds]);
 
+  // Background state sync interval
+  useEffect(() => {
+    if (status === 'focusing' || status === 'exception' || status === 'paused' || status === 'interrupted') {
+      syncActiveSessionState();
+    }
+  }, [status, elapsedSeconds, syncActiveSessionState]);
+
   // Break countdown timer
   useEffect(() => {
     if (status === 'break') {
@@ -136,7 +205,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setBreakRemainingSeconds(prev => {
           if (prev <= 1) {
             audioService.playDriftNudge();
-            setStatus('focusing');
+            setStatus(current => transitionFocusState(current, { type: 'END_BREAK' }));
             return 0;
           }
           return prev - 1;
@@ -157,17 +226,23 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [status]);
 
-  // Exception Pass Countdown timer
+  // Exception Pass Countdown
   useEffect(() => {
-    if (status === 'exception_pass' && exceptionPass) {
+    if (status === 'exception' && exceptionPass) {
       exceptionTimerRef.current = setInterval(() => {
         const remainingMs = exceptionPass.expiresAt - Date.now();
         if (remainingMs <= 0) {
           audioService.playDriftNudge();
           setExceptionPass(null);
-          setStatus('focusing');
+          setStatus(current => {
+            try {
+              return transitionFocusState(current, { type: 'EXPIRE_EXCEPTION' });
+            } catch {
+              return 'focusing';
+            }
+          });
         }
-      }, 1000);
+      }, 500);
     } else {
       if (exceptionTimerRef.current) {
         clearInterval(exceptionTimerRef.current);
@@ -192,6 +267,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const intentionId = crypto.randomUUID();
     const sessionId = crypto.randomUUID();
     const targetSeconds = durationMinutes * 60;
+    const now = Date.now();
 
     const newIntention: Intention = {
       id: intentionId,
@@ -199,7 +275,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       category,
       targetDurationMinutes: durationMinutes,
       protectionLevel,
-      createdAt: Date.now()
+      createdAt: now
     };
 
     const newSession: FocusSession = {
@@ -208,28 +284,50 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       intentionTitle: title.trim(),
       targetDurationSeconds: targetSeconds,
       elapsedSeconds: 0,
-      status: 'completed', // provisional
+      status: 'focusing',
       protectionLevel,
-      startedAt: Date.now(),
+      startedAt: now,
       endedAt: 0,
+      totalPausedMs: 0,
       driftCount: 0,
       totalRecoverySeconds: 0,
       intentionalExceptionsCount: 0
     };
 
     await storageService.saveIntention(newIntention);
+    await storageService.saveSession(newSession);
+
     setActiveIntention(newIntention);
     setActiveSession(newSession);
+    startedAtRef.current = now;
+    totalPausedMsRef.current = 0;
+    lastPausedAtRef.current = null;
     setElapsedSeconds(0);
     setTargetDurationSeconds(targetSeconds);
-    setStatus('focusing');
     setExceptionPass(null);
+    setRecoveredSessionState(null);
 
+    setStatus(current => transitionFocusState(current, { type: 'START_SESSION' }));
     audioService.playSessionStart();
   };
 
+  const pauseSession = () => {
+    if (status !== 'focusing') return;
+    lastPausedAtRef.current = Date.now();
+    setStatus(current => transitionFocusState(current, { type: 'PAUSE' }));
+  };
+
+  const resumeSession = () => {
+    if (status !== 'paused') return;
+    if (lastPausedAtRef.current) {
+      totalPausedMsRef.current += (Date.now() - lastPausedAtRef.current);
+      lastPausedAtRef.current = null;
+    }
+    setStatus(current => transitionFocusState(current, { type: 'RESUME' }));
+  };
+
   const triggerIntentFirewall = () => {
-    if (status !== 'focusing' && status !== 'exception_pass') return;
+    if (status !== 'focusing' && status !== 'exception' && status !== 'break') return;
     if (!activeSession) return;
 
     audioService.playDriftNudge();
@@ -243,7 +341,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setActiveDriftEvent(newDrift);
-    setStatus('intercepted');
+    setStatus(current => transitionFocusState(current, { type: 'TRIGGER_INTERRUPT' }));
   };
 
   const resolveDistraction = async () => {
@@ -261,16 +359,18 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await storageService.recordDrift(updatedDrift);
 
-    // Update active session counters
     const updatedSession: FocusSession = {
       ...activeSession,
       driftCount: activeSession.driftCount + 1,
       totalRecoverySeconds: activeSession.totalRecoverySeconds + recoveryLatencySeconds
     };
     setActiveSession(updatedSession);
+    await storageService.saveSession(updatedSession);
 
     setActiveDriftEvent(null);
-    setStatus('focusing');
+    setStatus(current => transitionFocusState(current, { type: 'RESOLVE_RECOVERY' }));
+    // Immediately resume flow
+    setStatus(current => transitionFocusState(current, { type: 'RESUME' }));
     audioService.playCaptureTick();
     await refreshData();
   };
@@ -302,15 +402,17 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       intentionalExceptionsCount: activeSession.intentionalExceptionsCount + 1
     };
     setActiveSession(updatedSession);
+    await storageService.saveSession(updatedSession);
 
     setActiveDriftEvent(null);
-    setStatus('exception_pass');
+    setStatus(current => transitionFocusState(current, { type: 'GRANT_EXCEPTION' }));
     await refreshData();
   };
 
   const emergencyExit = async () => {
     if (!activeSession) {
       setStatus('idle');
+      storageService.clearActiveSessionState();
       return;
     }
 
@@ -319,10 +421,12 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...activeSession,
       elapsedSeconds,
       endedAt,
-      status: 'abandoned'
+      status: 'cancelled'
     };
 
     await storageService.saveSession(finalSession);
+    storageService.clearActiveSessionState();
+
     setActiveSession(null);
     setActiveIntention(null);
     setActiveDriftEvent(null);
@@ -333,22 +437,23 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const startBreak = (minutes: number) => {
     setBreakRemainingSeconds(minutes * 60);
-    setStatus('break');
+    setStatus(current => transitionFocusState(current, { type: 'START_BREAK' }));
   };
 
   const endBreak = () => {
     setBreakRemainingSeconds(0);
-    setStatus('focusing');
+    setStatus(current => transitionFocusState(current, { type: 'END_BREAK' }));
   };
 
   const finishSessionPrompt = () => {
     audioService.playSessionComplete();
-    setStatus('completing');
+    setStatus(current => transitionFocusState(current, { type: 'PROMPT_COMPLETION' }));
   };
 
   const submitCompletedOutcome = async (outcomeText: string, rating: FocusRating) => {
     if (!activeSession || !activeIntention) {
       setStatus('idle');
+      storageService.clearActiveSessionState();
       return;
     }
 
@@ -377,6 +482,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await storageService.saveCompletedOutcome(outcomeRecord);
     }
 
+    storageService.clearActiveSessionState();
     setActiveSession(null);
     setActiveIntention(null);
     setExceptionPass(null);
@@ -408,13 +514,23 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshData();
   };
 
-  const openDistractionInbox = () => setIsDistractionInboxOpen(true);
-  const closeDistractionInbox = () => setIsDistractionInboxOpen(false);
+  const archiveDistractionItem = async (id: string) => {
+    await storageService.updateDistractionItemStatus(id, 'archived');
+    await refreshData();
+  };
+
+  const editDistractionItem = async (id: string, content: string) => {
+    await storageService.editDistractionItem(id, content);
+    await refreshData();
+  };
 
   const deleteDistractionItem = async (id: string) => {
     await storageService.deleteDistractionItem(id);
     await refreshData();
   };
+
+  const openDistractionInbox = () => setIsDistractionInboxOpen(true);
+  const closeDistractionInbox = () => setIsDistractionInboxOpen(false);
 
   const toggleMute = () => {
     const next = !isAudioMuted;
@@ -432,12 +548,48 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return await storageService.exportFullData();
   };
 
+  const importData = async (jsonString: string) => {
+    const result = await storageService.importFullData(jsonString);
+    await refreshData();
+    return result;
+  };
+
   const wipeData = async () => {
     await storageService.wipeAllData();
     setActiveSession(null);
     setActiveIntention(null);
     setStatus('idle');
+    setRecoveredSessionState(null);
     await refreshData();
+  };
+
+  // Recovery actions
+  const resumeRecoveredSession = () => {
+    if (!recoveredSessionState) return;
+    setActiveIntention(recoveredSessionState.intention);
+    setActiveSession(recoveredSessionState.session);
+    startedAtRef.current = recoveredSessionState.startedAt;
+    totalPausedMsRef.current = recoveredSessionState.totalPausedMs;
+    lastPausedAtRef.current = null;
+    setTargetDurationSeconds(recoveredSessionState.targetDurationSeconds);
+    setElapsedSeconds(recoveredSessionState.session.elapsedSeconds);
+    setStatus('focusing');
+    setRecoveredSessionState(null);
+  };
+
+  const finishRecoveredSession = () => {
+    if (!recoveredSessionState) return;
+    setActiveIntention(recoveredSessionState.intention);
+    setActiveSession(recoveredSessionState.session);
+    setElapsedSeconds(recoveredSessionState.session.elapsedSeconds);
+    setRecoveredSessionState(null);
+    setStatus('completing');
+  };
+
+  const discardRecoveredSession = () => {
+    storageService.clearActiveSessionState();
+    setRecoveredSessionState(null);
+    setStatus('idle');
   };
 
   return (
@@ -451,6 +603,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         breakRemainingSeconds,
         exceptionPass,
         activeDriftEvent,
+        recoveredSessionState,
         isDistractionInboxOpen,
         isRescueModalOpen,
         isAudioMuted,
@@ -461,6 +614,8 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         completedOutcomes,
 
         startSession,
+        pauseSession,
+        resumeSession,
         triggerIntentFirewall,
         resolveDistraction,
         grantIntentionalException,
@@ -473,14 +628,20 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         closeRescueModal,
         applyFocusRescue,
         saveDistractionNote,
+        archiveDistractionItem,
+        editDistractionItem,
+        deleteDistractionItem,
         openDistractionInbox,
         closeDistractionInbox,
-        deleteDistractionItem,
         toggleMute,
         toggleAmbientSound,
         refreshData,
         exportData,
-        wipeData
+        importData,
+        wipeData,
+        resumeRecoveredSession,
+        finishRecoveredSession,
+        discardRecoveredSession
       }}
     >
       {children}

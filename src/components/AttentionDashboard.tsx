@@ -8,6 +8,7 @@ import {
   RotateCcw,
   CheckCircle,
   Download,
+  Upload,
   Trash2,
   Inbox,
   ShieldCheck,
@@ -26,6 +27,7 @@ export const AttentionDashboard: React.FC<AttentionDashboardProps> = ({ onBackTo
     completedOutcomes,
     distractionInboxItems,
     exportData,
+    importData,
     wipeData,
     deleteDistractionItem
   } = useFocus();
@@ -53,6 +55,25 @@ export const AttentionDashboard: React.FC<AttentionDashboardProps> = ({ onBackTo
     URL.revokeObjectURL(url);
     setExportMessage('Export downloaded successfully.');
     setTimeout(() => setExportMessage(''), 4000);
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const result = await importData(text);
+        setExportMessage(`Backup successfully imported (${result.importedCount} items restored).`);
+        setTimeout(() => setExportMessage(''), 5000);
+      } catch (err) {
+        alert(`Import failed: ${err instanceof Error ? err.message : 'Invalid backup file'}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleWipe = async () => {
@@ -240,7 +261,7 @@ export const AttentionDashboard: React.FC<AttentionDashboardProps> = ({ onBackTo
               </h3>
             </div>
             <span className="text-xs font-mono text-slate-400">
-              Verified Deliverables
+              User-Reported Deliverables
             </span>
           </div>
 
@@ -334,6 +355,16 @@ export const AttentionDashboard: React.FC<AttentionDashboardProps> = ({ onBackTo
               <Download className="w-3.5 h-3.5" />
               Export JSON
             </button>
+            <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 bg-obsidian-900 hover:bg-obsidian-800 border border-obsidian-700 transition-all cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              Import JSON
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+            </label>
             <button
               onClick={handleWipe}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer"

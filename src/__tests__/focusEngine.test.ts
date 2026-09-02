@@ -46,6 +46,7 @@ describe('ONE — Intentional Attention Data Structures & Domain Logic', () => {
       protectionLevel: 3,
       startedAt: Date.now() - 1500000,
       endedAt: Date.now(),
+      totalPausedMs: 0,
       driftCount: 2,
       totalRecoverySeconds: 84, // 84 seconds total drift recovery
       intentionalExceptionsCount: 1,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFocus } from '../context/FocusContext';
 import { LifeBuoy, X, Sparkles, ArrowRight } from 'lucide-react';
 
@@ -8,6 +8,17 @@ export const FocusRescueModal: React.FC = () => {
   const [newGoal, setNewGoal] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
 
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isRescueModalOpen) {
+        closeRescueModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRescueModalOpen, closeRescueModal]);
+
   if (!isRescueModalOpen) return null;
 
   const handleRescue = async (e: React.FormEvent) => {
@@ -16,7 +27,12 @@ export const FocusRescueModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-obsidian-950/85 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rescue-title"
+      className="fixed inset-0 z-50 bg-obsidian-950/85 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in"
+    >
       <div className="max-w-md w-full glass-panel rounded-3xl p-8 border border-emerald-500/30 shadow-2xl relative">
         <div className="flex items-center justify-between pb-3">
           <div className="flex items-center gap-2">
@@ -29,6 +45,7 @@ export const FocusRescueModal: React.FC = () => {
           </div>
           <button
             onClick={closeRescueModal}
+            aria-label="Close modal"
             className="p-1.5 rounded-full text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
@@ -36,7 +53,7 @@ export const FocusRescueModal: React.FC = () => {
         </div>
 
         <div className="my-4">
-          <h3 className="text-2xl font-light text-white tracking-tight mb-2">
+          <h3 id="rescue-title" className="text-2xl font-light text-white tracking-tight mb-2">
             You haven't lost the day.
           </h3>
           <p className="text-sm text-slate-300 leading-relaxed">
