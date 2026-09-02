@@ -145,7 +145,9 @@ class StorageService {
 
   // Daily Attention Stats Calculation
   async getDailyStats(targetDateStr?: string): Promise<DailyAttentionStats> {
-    const today = targetDateStr || new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const today = targetDateStr || localDateStr;
     const startOfDay = new Date(`${today}T00:00:00.000`).getTime();
     const endOfDay = new Date(`${today}T23:59:59.999`).getTime();
 
