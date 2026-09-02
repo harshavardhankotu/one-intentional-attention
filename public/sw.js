@@ -3,7 +3,8 @@ const CACHE_NAME = 'one-attention-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/one-icon.svg'
 ];
 
 self.addEventListener('install', (event) => {

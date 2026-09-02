@@ -7,7 +7,9 @@ import {
   CompletedOutcome,
   DailyAttentionStats,
   FocusProfile,
-  PersistedSessionState
+  PersistedSessionState,
+  ProtectionLevel,
+  FocusRating
 } from '../types';
 
 class OneDatabase extends Dexie {
@@ -61,6 +63,10 @@ class StorageService {
     await db.driftEvents.put(drift);
   }
 
+  async recordDriftEvent(drift: DriftEvent): Promise<void> {
+    await this.recordDrift(drift);
+  }
+
   async updateDrift(drift: DriftEvent): Promise<void> {
     await db.driftEvents.put(drift);
   }
@@ -76,6 +82,10 @@ class StorageService {
 
   async getDistractionItems(): Promise<DistractionItem[]> {
     return await db.distractionInbox.orderBy('createdAt').reverse().toArray();
+  }
+
+  async getDistractionInbox(): Promise<DistractionItem[]> {
+    return await this.getDistractionItems();
   }
 
   async updateDistractionItemStatus(id: string, status: DistractionItem['status']): Promise<void> {
@@ -260,7 +270,7 @@ class StorageService {
     }, null, 2);
   }
 
-  // Full JSON Import with Strict Schema Validation
+  // Full JSON Import with Strict Schema Validation & Hostile Input Sanitization
   async importFullData(jsonString: string): Promise<{ importedCount: number }> {
     let parsed: Record<string, unknown>;
     try {
@@ -269,7 +279,7 @@ class StorageService {
       throw new Error('Invalid JSON format: Unable to parse file.');
     }
 
-    if (!parsed || typeof parsed !== 'object') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       throw new Error('Invalid backup structure: Root must be a JSON object.');
     }
 
@@ -277,22 +287,140 @@ class StorageService {
       throw new Error(`Unsupported schema version: ${parsed.schemaVersion || 'unknown'}`);
     }
 
-    const intentions = Array.isArray(parsed.intentions) ? parsed.intentions as Intention[] : [];
-    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions as FocusSession[] : [];
-    const driftEvents = Array.isArray(parsed.driftEvents) ? parsed.driftEvents as DriftEvent[] : [];
-    const distractionInbox = Array.isArray(parsed.distractionInbox) ? parsed.distractionInbox as DistractionItem[] : [];
-    const completedOutcomes = Array.isArray(parsed.completedOutcomes) ? parsed.completedOutcomes as CompletedOutcome[] : [];
+    const MAX_ITEMS = 10000;
+
+    // Sanitize intentions
+    const rawIntentions = Array.isArray(parsed.intentions) ? parsed.intentions : [];
+    if (rawIntentions.length > MAX_ITEMS) throw new Error(`Exceeded maximum entity limit (${MAX_ITEMS}).`);
+    const validIntentions: Intention[] = [];
+    for (const item of rawIntentions) {
+      if (item && typeof item === 'object' && !Object.prototype.hasOwnProperty.call(item, '__proto__')) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === 'string' && typeof obj.title === 'string') {
+          validIntentions.push({
+            id: String(obj.id),
+            title: String(obj.title).slice(0, 300),
+            category: (['work', 'study', 'creative', 'exercise', 'personal'].includes(String(obj.category))
+              ? obj.category
+              : 'work') as Intention['category'],
+            targetDurationMinutes: Math.min(480, Math.max(1, Number(obj.targetDurationMinutes) || 25)),
+            protectionLevel: Math.min(5, Math.max(1, Number(obj.protectionLevel) || 3)) as ProtectionLevel,
+            createdAt: Number(obj.createdAt) || Date.now()
+          });
+        }
+      }
+    }
+
+    // Sanitize sessions
+    const rawSessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+    if (rawSessions.length > MAX_ITEMS) throw new Error(`Exceeded maximum entity limit (${MAX_ITEMS}).`);
+    const validSessions: FocusSession[] = [];
+    for (const item of rawSessions) {
+      if (item && typeof item === 'object' && !Object.prototype.hasOwnProperty.call(item, '__proto__')) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === 'string' && typeof obj.intentionId === 'string') {
+          validSessions.push({
+            id: String(obj.id),
+            intentionId: String(obj.intentionId),
+            intentionTitle: String(obj.intentionTitle || 'Focus Session').slice(0, 300),
+            targetDurationSeconds: Math.max(0, Number(obj.targetDurationSeconds) || 0),
+            elapsedSeconds: Math.max(0, Number(obj.elapsedSeconds) || 0),
+            totalPausedMs: Math.max(0, Number(obj.totalPausedMs) || 0),
+            status: (['focusing', 'completed', 'cancelled', 'rescued'].includes(String(obj.status))
+              ? obj.status
+              : 'completed') as FocusSession['status'],
+            protectionLevel: Math.min(5, Math.max(1, Number(obj.protectionLevel) || 3)) as ProtectionLevel,
+            startedAt: Number(obj.startedAt) || Date.now(),
+            endedAt: Number(obj.endedAt) || Date.now(),
+            driftCount: Math.max(0, Number(obj.driftCount) || 0),
+            totalRecoverySeconds: Math.max(0, Number(obj.totalRecoverySeconds) || 0),
+            intentionalExceptionsCount: Math.max(0, Number(obj.intentionalExceptionsCount) || 0),
+            accomplishedOutcome: obj.accomplishedOutcome ? String(obj.accomplishedOutcome).slice(0, 500) : undefined,
+            focusRating: (['deep', 'moderate', 'distracted'].includes(String(obj.focusRating)) ? obj.focusRating : undefined) as FocusRating | undefined
+          });
+        }
+      }
+    }
+
+    // Sanitize driftEvents
+    const rawDrifts = Array.isArray(parsed.driftEvents) ? parsed.driftEvents : [];
+    if (rawDrifts.length > MAX_ITEMS) throw new Error(`Exceeded maximum entity limit (${MAX_ITEMS}).`);
+    const validDriftEvents: DriftEvent[] = [];
+    for (const item of rawDrifts) {
+      if (item && typeof item === 'object' && !Object.prototype.hasOwnProperty.call(item, '__proto__')) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === 'string' && typeof obj.sessionId === 'string') {
+          validDriftEvents.push({
+            id: String(obj.id),
+            sessionId: String(obj.sessionId),
+            timestamp: Number(obj.timestamp) || Date.now(),
+            resolvedTimestamp: obj.resolvedTimestamp ? Number(obj.resolvedTimestamp) : undefined,
+            recoveryLatencySeconds: Math.max(0, Number(obj.recoveryLatencySeconds) || 0),
+            reasonCategory: (['mind_wandering', 'habitual_click', 'urgent_task', 'external_trigger', 'other'].includes(String(obj.reasonCategory))
+              ? obj.reasonCategory
+              : 'habitual_click') as DriftEvent['reasonCategory'],
+            resolution: (['recovered', 'intentional_exception', 'emergency_exit'].includes(String(obj.resolution))
+              ? obj.resolution
+              : 'recovered') as DriftEvent['resolution']
+          });
+        }
+      }
+    }
+
+    // Sanitize distractionInbox
+    const rawInbox = Array.isArray(parsed.distractionInbox) ? parsed.distractionInbox : [];
+    if (rawInbox.length > MAX_ITEMS) throw new Error(`Exceeded maximum entity limit (${MAX_ITEMS}).`);
+    const validInbox: DistractionItem[] = [];
+    for (const item of rawInbox) {
+      if (item && typeof item === 'object' && !Object.prototype.hasOwnProperty.call(item, '__proto__')) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === 'string' && typeof obj.content === 'string') {
+          validInbox.push({
+            id: String(obj.id),
+            sessionId: obj.sessionId ? String(obj.sessionId) : undefined,
+            content: String(obj.content).slice(0, 500),
+            createdAt: Number(obj.createdAt) || Date.now(),
+            status: (['inbox', 'archived', 'actioned', 'dismissed'].includes(String(obj.status))
+              ? obj.status
+              : 'inbox') as DistractionItem['status']
+          });
+        }
+      }
+    }
+
+    // Sanitize completedOutcomes
+    const rawOutcomes = Array.isArray(parsed.completedOutcomes) ? parsed.completedOutcomes : [];
+    if (rawOutcomes.length > MAX_ITEMS) throw new Error(`Exceeded maximum entity limit (${MAX_ITEMS}).`);
+    const validOutcomes: CompletedOutcome[] = [];
+    for (const item of rawOutcomes) {
+      if (item && typeof item === 'object' && !Object.prototype.hasOwnProperty.call(item, '__proto__')) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.id === 'string' && typeof obj.sessionId === 'string') {
+          validOutcomes.push({
+            id: String(obj.id),
+            sessionId: String(obj.sessionId),
+            goalTitle: String(obj.goalTitle || obj.intentionTitle || 'Focus Session').slice(0, 300),
+            outcomeText: String(obj.outcomeText || 'Completed').slice(0, 1000),
+            focusRating: (['deep', 'moderate', 'distracted'].includes(String(obj.focusRating))
+              ? obj.focusRating
+              : 'moderate') as FocusRating,
+            completedAt: Number(obj.completedAt) || Date.now(),
+            durationMinutes: Math.max(0, Number(obj.durationMinutes) || 0)
+          });
+        }
+      }
+    }
 
     // Transactional bulk put
     await db.transaction('rw', [db.intentions, db.sessions, db.driftEvents, db.distractionInbox, db.completedOutcomes], async () => {
-      if (intentions.length) await db.intentions.bulkPut(intentions);
-      if (sessions.length) await db.sessions.bulkPut(sessions);
-      if (driftEvents.length) await db.driftEvents.bulkPut(driftEvents);
-      if (distractionInbox.length) await db.distractionInbox.bulkPut(distractionInbox);
-      if (completedOutcomes.length) await db.completedOutcomes.bulkPut(completedOutcomes);
+      if (validIntentions.length) await db.intentions.bulkPut(validIntentions);
+      if (validSessions.length) await db.sessions.bulkPut(validSessions);
+      if (validDriftEvents.length) await db.driftEvents.bulkPut(validDriftEvents);
+      if (validInbox.length) await db.distractionInbox.bulkPut(validInbox);
+      if (validOutcomes.length) await db.completedOutcomes.bulkPut(validOutcomes);
     });
 
-    const total = intentions.length + sessions.length + driftEvents.length + distractionInbox.length + completedOutcomes.length;
+    const total = validIntentions.length + validSessions.length + validDriftEvents.length + validInbox.length + validOutcomes.length;
     return { importedCount: total };
   }
 

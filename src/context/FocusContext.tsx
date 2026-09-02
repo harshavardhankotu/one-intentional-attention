@@ -16,6 +16,7 @@ import {
 import { storageService } from '../services/storageService';
 import { audioService } from '../services/audioService';
 import { transitionFocusState } from '../services/focusStateMachine';
+import { extensionBridge } from '../services/extensionBridge';
 
 interface FocusContextType {
   status: SessionStatus;
@@ -130,6 +131,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const syncActiveSessionState = useCallback(() => {
     if (!activeSession || !activeIntention || status === 'idle' || status === 'completed' || status === 'cancelled') {
       storageService.clearActiveSessionState();
+      extensionBridge.syncSession(null, null, null);
       return;
     }
 
@@ -152,6 +154,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     storageService.saveActiveSessionState(state);
+    extensionBridge.syncSession(activeSession, activeIntention, exceptionPass);
   }, [activeSession, activeIntention, status, elapsedSeconds, targetDurationSeconds, exceptionPass, activeDriftEvent]);
 
   // Absolute Timestamp Timer Tick

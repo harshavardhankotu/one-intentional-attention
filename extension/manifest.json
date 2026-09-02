@@ -5,14 +5,18 @@
   "description": "Companion browser extension for ONE. Intent Firewall protection and Intentional Exceptions.",
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "tabs"
   ],
   "host_permissions": [
     "*://*.instagram.com/*",
     "*://*.youtube.com/*",
     "*://*.reddit.com/*",
     "*://*.twitter.com/*",
-    "*://*.x.com/*"
+    "*://*.x.com/*",
+    "*://*.tiktok.com/*",
+    "*://*.facebook.com/*",
+    "*://*.netflix.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,11 +24,24 @@
   "content_scripts": [
     {
       "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://localhost/*",
+        "https://*/*"
+      ],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
         "*://*.instagram.com/*",
         "*://*.youtube.com/*",
         "*://*.reddit.com/*",
         "*://*.twitter.com/*",
-        "*://*.x.com/*"
+        "*://*.x.com/*",
+        "*://*.tiktok.com/*",
+        "*://*.facebook.com/*",
+        "*://*.netflix.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_start"

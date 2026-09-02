@@ -96,8 +96,11 @@ export const OneThingMode: React.FC = () => {
       <header className="w-full max-w-2xl flex items-center justify-between z-10 pt-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-900 border border-obsidian-700/80">
           <span className={`w-2 h-2 rounded-full ${isPaused ? 'bg-slate-400' : 'bg-amber-400 animate-pulse'}`} />
-          <span className="text-xs font-mono text-slate-300 uppercase tracking-wider">
+          <span className="text-xs font-mono text-slate-300 uppercase tracking-wider hidden sm:inline">
             {isPaused ? 'PAUSED' : `ONE THING MODE • Level ${activeIntention?.protectionLevel || 3}`}
+          </span>
+          <span className="text-xs font-mono text-slate-300 uppercase tracking-wider sm:hidden">
+            {isPaused ? 'PAUSED' : `ONE • L${activeIntention?.protectionLevel || 3}`}
           </span>
         </div>
 

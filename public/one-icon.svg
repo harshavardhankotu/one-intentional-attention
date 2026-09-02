@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="amberGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#060709" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Base Background -->
+  <rect width="512" height="512" rx="128" fill="#060709"/>
+  <rect width="508" height="508" x="2" y="2" rx="126" fill="none" stroke="#2D3446" stroke-width="4"/>
+  
+  <!-- Ambient Focal Glow -->
+  <circle cx="256" cy="256" r="220" fill="url(#amberGlow)"/>
+  
+  <!-- Minimalist Focal Circle (The Aperture of Attention) -->
+  <circle cx="256" cy="256" r="160" fill="#0F1218" stroke="#F59E0B" stroke-width="6" stroke-dasharray="12 8"/>
+  <circle cx="256" cy="256" r="120" fill="#141820" stroke="#FBBF24" stroke-width="3" opacity="0.6"/>
+
+  <!-- Minimalist ONE Pillar / Monolith -->
+  <path d="M236 170 L256 150 L276 150 L276 342 L236 342 Z" fill="url(#goldGradient)"/>
+  <rect x="216" y="342" width="80" height="16" rx="8" fill="url(#goldGradient)"/>
+</svg>
