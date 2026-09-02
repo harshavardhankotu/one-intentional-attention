@@ -54,6 +54,7 @@ interface FocusContextType {
   applyFocusRescue: (minutes: number, newGoal?: string) => Promise<void>;
   saveDistractionNote: (content: string) => Promise<void>;
   archiveDistractionItem: (id: string) => Promise<void>;
+  restoreDistractionItem: (id: string) => Promise<void>;
   editDistractionItem: (id: string, content: string) => Promise<void>;
   deleteDistractionItem: (id: string) => Promise<void>;
   openDistractionInbox: () => void;
@@ -519,6 +520,11 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshData();
   };
 
+  const restoreDistractionItem = async (id: string) => {
+    await storageService.updateDistractionItemStatus(id, 'inbox');
+    await refreshData();
+  };
+
   const editDistractionItem = async (id: string, content: string) => {
     await storageService.editDistractionItem(id, content);
     await refreshData();
@@ -629,6 +635,7 @@ export const FocusProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         applyFocusRescue,
         saveDistractionNote,
         archiveDistractionItem,
+        restoreDistractionItem,
         editDistractionItem,
         deleteDistractionItem,
         openDistractionInbox,

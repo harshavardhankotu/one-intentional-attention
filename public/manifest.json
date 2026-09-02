@@ -1,0 +1,17 @@
+{
+  "name": "ONE — Intentional Attention Platform",
+  "short_name": "ONE",
+  "description": "One thing. Right now. Intent over restriction, no shame, outcomes over screen time.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060709",
+  "theme_color": "#060709",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

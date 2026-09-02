@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useFocus } from '../context/FocusContext';
 import { ProtectionLevel } from '../types';
-import { Shield, Sparkles, Clock, Compass, LifeBuoy, BarChart2 } from 'lucide-react';
+import { Shield, Sparkles, Clock, Compass, LifeBuoy, BarChart2, Wand2 } from 'lucide-react';
+import { aiCoachService } from '../services/aiCoachService';
 
 interface IntentionSetupProps {
   onOpenDashboard: () => void;
@@ -11,6 +12,7 @@ export const IntentionSetup: React.FC<IntentionSetupProps> = ({ onOpenDashboard 
   const { startSession, openRescueModal } = useFocus();
 
   const [title, setTitle] = useState('');
+  const [isSharpening, setIsSharpening] = useState(false);
   const [duration, setDuration] = useState<number>(45);
   const [customDuration, setCustomDuration] = useState<string>('');
   const [isCustom, setIsCustom] = useState<boolean>(false);
@@ -40,6 +42,17 @@ export const IntentionSetup: React.FC<IntentionSetupProps> = ({ onOpenDashboard 
     if (!title.trim()) return;
     const finalDuration = isCustom && Number(customDuration) > 0 ? Number(customDuration) : duration;
     await startSession(title, finalDuration, protectionLevel, category);
+  };
+
+  const handleSharpen = async () => {
+    if (!title.trim() || isSharpening) return;
+    setIsSharpening(true);
+    try {
+      const sharpened = await aiCoachService.sharpenGoal(title);
+      setTitle(sharpened);
+    } finally {
+      setIsSharpening(false);
+    }
   };
 
   return (
@@ -85,15 +98,27 @@ export const IntentionSetup: React.FC<IntentionSetupProps> = ({ onOpenDashboard 
 
         <form onSubmit={handleStart} className="space-y-6">
           {/* Main Goal Input */}
-          <div>
+          <div className="relative">
             <input
               type="text"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Finish MVP architecture"
-              className="w-full bg-obsidian-900 border border-obsidian-600/80 rounded-2xl px-5 py-4 text-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/50 transition-all shadow-inner"
+              className="w-full bg-obsidian-900 border border-obsidian-600/80 rounded-2xl pl-5 pr-32 py-4 text-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/50 transition-all shadow-inner"
             />
+            {title.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={handleSharpen}
+                disabled={isSharpening}
+                className="absolute right-3 top-3 px-3 py-2 rounded-xl bg-obsidian-800 hover:bg-obsidian-750 text-amber-300 border border-amber-400/30 text-xs font-mono flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                title="Sharpen into concrete implementation intention"
+              >
+                <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+                {isSharpening ? 'Sharpening...' : 'Sharpen'}
+              </button>
+            )}
           </div>
 
           {/* Preset Suggestions */}
