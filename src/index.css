@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #060709;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar for distraction inbox and dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0C10;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F2532;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2D3446;
+}
+
+/* Smooth glass effect */
+.glass-panel {
+  background: rgba(15, 18, 24, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 52, 70, 0.5);
+}
+
+.glass-card {
+  background: rgba(20, 24, 32, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(45, 52, 70, 0.4);
+}
