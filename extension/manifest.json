@@ -9,14 +9,7 @@
     "tabs"
   ],
   "host_permissions": [
-    "*://*.instagram.com/*",
-    "*://*.youtube.com/*",
-    "*://*.reddit.com/*",
-    "*://*.twitter.com/*",
-    "*://*.x.com/*",
-    "*://*.tiktok.com/*",
-    "*://*.facebook.com/*",
-    "*://*.netflix.com/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -27,21 +20,14 @@
         "http://localhost/*",
         "http://127.0.0.1/*",
         "https://localhost/*",
-        "https://*/*"
+        "https://*.github.io/*"
       ],
       "js": ["bridge.js"],
       "run_at": "document_start"
     },
     {
       "matches": [
-        "*://*.instagram.com/*",
-        "*://*.youtube.com/*",
-        "*://*.reddit.com/*",
-        "*://*.twitter.com/*",
-        "*://*.x.com/*",
-        "*://*.tiktok.com/*",
-        "*://*.facebook.com/*",
-        "*://*.netflix.com/*"
+        "<all_urls>"
       ],
       "js": ["content.js"],
       "run_at": "document_start"
